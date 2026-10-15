@@ -20,7 +20,7 @@ The panel in the top-left shows your destination with its distance and direction
 
 ## What is in the world
 
-| | |
+| Feature | What is in it |
 |---|---|
 | Streets | 349 named road lines traced from map imagery (243 distinct street names), in six road classes, with a parking lane beside the travel lanes |
 | Houses and trees | 7,869 houses and 6,000 trees placed procedurally along the streets (they are not real building footprints) |
