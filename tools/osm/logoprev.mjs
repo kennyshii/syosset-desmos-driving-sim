@@ -1,0 +1,22 @@
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import { chromium } from "playwright";
+const require = createRequire(import.meta.url);
+const LG = require(new URL("../../src/logos.js", import.meta.url).pathname);
+const keys = process.argv[3] ? process.argv[3].split(",") : LG.keys;
+const T = LG.build(keys);
+const H = +(process.env.H || 110), cols = +(process.env.COLS || 4), cellW = H * 4.6, cellH = H * 1.45;
+const rows = Math.ceil(T.length / cols);
+let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cols * cellW}" height="${rows * cellH}" style="background:#d8d2c4">`;
+T.forEach((t, i) => {
+  const ox = (i % cols) * cellW + cellW / 2, oy = Math.floor(i / cols) * cellH + H * 1.2;
+  for (const p of t.polys) svg += `<polygon points="${p.pts.map(([u, w]) => (ox + u * H).toFixed(1) + "," + (oy - w * H).toFixed(1)).join(" ")}" fill="rgb(${p.col.join(",")})"/>`;
+  svg += `<text x="${(i % cols) * cellW + 6}" y="${Math.floor(i / cols) * cellH + 14}" font-size="12" font-family="Arial">${t.key} polys ${t.polys.length} verts ${t.nv}</text>`;
+});
+svg += "</svg>";
+const b = await chromium.launch({ channel: "chrome", headless: true });
+const pg = await b.newPage({ viewport: { width: Math.round(cols * cellW), height: Math.round(rows * cellH) } });
+await pg.setContent(`<body style="margin:0">${svg}</body>`);
+await pg.screenshot({ path: process.argv[2] });
+await b.close();
+console.log(T.map((t) => t.key + ":" + t.polys.length + "/" + t.nv).join(" "), "total verts", T.reduce((s, t) => s + t.nv, 0), "polys", T.reduce((s, t) => s + t.polys.length, 0));

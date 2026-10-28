@@ -1,0 +1,22 @@
+import fs from "node:fs";
+import { chromium } from "playwright";
+const [linesF, railF, oldF, outPng, cx, cy, span, W] = process.argv.slice(2);
+const lines = JSON.parse(fs.readFileSync(linesF, "utf8"));
+const rail = JSON.parse(fs.readFileSync(railF, "utf8"));
+const old = oldF && oldF !== "-" ? JSON.parse(fs.readFileSync(oldF, "utf8")) : [];
+const X = +cx || 0, Y = +cy || 0, S = +span || 4800, PX = +W || 1600;
+const k = PX / S;
+const tx = (p) => ((p[0] - X + S / 2) * k).toFixed(1) + "," + ((S / 2 - (p[1] - Y)) * k).toFixed(1);
+const HW = { 0: 5, 1: 5.6, 2: 6.6, 3: 7.6, 4: 10.5, 5: 12 };
+const col = { 0: "#9aa", 1: "#bbb", 2: "#e8c060", 3: "#e09040", 4: "#d05050", 5: "#7050c0" };
+let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${PX}" height="${PX}" style="background:#f4f1ea">`;
+for (const l of lines) svg += `<polyline points="${l.pts.map(tx).join(" ")}" fill="none" stroke="${col[l.cls]}" stroke-width="${Math.max(1, 2 * HW[l.cls] * k)}" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
+for (const l of old) svg += `<polyline points="${l.pts.map(tx).join(" ")}" fill="none" stroke="#e00" stroke-width="1" opacity="0.8"/>`;
+svg += `<polyline points="${rail.map(tx).join(" ")}" fill="none" stroke="#222" stroke-width="2" stroke-dasharray="6,4"/>`;
+if (S <= 2000) for (const l of lines) if (l.nm) { const p = l.pts[Math.floor(l.pts.length / 2)]; svg += `<text x="${tx(p).split(",")[0]}" y="${tx(p).split(",")[1]}" font-size="11" font-family="Arial" fill="#222">${l.nm.replace(/&/g, "&amp;")}</text>`; }
+svg += "</svg>";
+const b = await chromium.launch({ channel: "chrome", headless: true });
+const pg = await b.newPage({ viewport: { width: PX, height: PX } });
+await pg.setContent(`<body style="margin:0">${svg}</body>`);
+await pg.screenshot({ path: outPng });
+await b.close();
