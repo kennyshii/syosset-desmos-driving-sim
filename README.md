@@ -34,9 +34,13 @@ Landmarks are modeled as buildings with a name sign on the front. The LIRR stati
 |---|---|
 | ![A green street sign reading Jackson Ave and Albert Ave](docs/images/street-sign.jpg) | ![Parked cars on both sides of a street with a top-down parking camera showing the gap to the curb](docs/images/parallel-parking-cam.jpg) |
 
+![Driving north on Jackson Avenue past the post office, with tree shadows, sunlit canopies and the street fading into haze](docs/images/jackson-ave.jpg)
+
 ## How it works
 
 **3D inside a 2D calculator.** Desmos only draws 2D shapes, so the graph does its own 3D. Each tick it takes the car's position and heading, transforms every nearby 3D point into camera space, applies a perspective divide, clips anything behind the camera, and draws the result as polygons. Faces are sorted from far to near (the painter's algorithm) so closer things cover farther ones.
+
+**Sky, haze and trees.** The sky is a 14-step gradient from pale haze at the horizon to deep blue overhead, and the horizon has three layers of hills and tree lines that get hazier the farther away they are. Buildings, trees, the grass and the roads all fade toward the same haze color with distance, so faraway streets no longer look sharper than the houses next to them. Each tree has a sunlit crown on the side facing the sun and casts a soft shadow on the ground under it.
 
 **Keeping it fast.** Desmos recomputes expressions constantly, so the cost of a frame is what matters most. Several techniques keep it playable:
 
@@ -44,6 +48,7 @@ Landmarks are modeled as buildings with a name sign on the front. The LIRR stati
 - Positions, heights and colors are packed into single integers and unpacked by expressions, which keeps the saved graph small (the world data is about 450 KB).
 - Values that change every tick but rarely matter, such as which cell the car is in, are only written when they actually change, so they do not trigger everything that depends on them.
 - Lists in Desmos are capped at 10,000 elements, so the cars, houses and road pieces are stored in per-cell lists that stay under the cap.
+- Desmos pays a fixed cost for every expression it recomputes, so helper expressions that are only used once are folded into the expression that uses them. That freed enough time to add the haze, the tree shadows and the sunlit crowns without slowing the graph down.
 
 **Driving model.** Speed responds to the gas and brake pedals, steering is a slider knob with smoothed turning, and a lane-assist option nudges the car toward the lane (it is looser in parking lanes). Reverse is a separate gear with its own speed cap.
 
@@ -58,6 +63,7 @@ Landmarks are modeled as buildings with a name sign on the front. The LIRR stati
 - **Collision speed.** The first collision version checked every nearby block and the graph slowed to a few ticks per second. A distance prefilter brought it back to roughly 19 ticks per second on my laptop.
 - **Cars in the wrong grid.** Parked cars first used the house grid, which was too coarse for them. Moving them to the finer road grid fixed the problem.
 - **Fitting letters in the font.** Each glyph is limited to 14 points, so I had to redraw the 3 and 8 to stay under the limit.
+- **Shadows that cost too much.** The first tree shadows projected all eight corners of every shadow into 3D and slowed the graph by about 6%. Projecting only each shadow's center and scaling a fixed octagon looks the same and costs almost nothing.
 
 ## Repository layout
 
@@ -69,6 +75,8 @@ src/
   patch9.js       in-browser builder: world data into Desmos expressions
   patch10.js      in-browser builder: wide streets, parked cars, collision, reverse gear,
                   parking cam, street signs and facade signs
+  patch11.js      in-browser builder: sky gradient, horizon layers, distance haze on the
+                  ground and roads, tree shadows, sunlit tree crowns, expression folding
 data/
   final_lines.json   street network (names, road class, points in meters)
   final_rail.json    LIRR line
@@ -84,6 +92,8 @@ node src/pack3.js
 ```
 
 The patch scripts run in the browser console on a Desmos page and add their expressions to a base graph state (the camera, dashboard and driving engine). That base state lives in the saved graph rather than in this repository, so the live demo is the complete working version and the code here documents how the world and the later features were built.
+
+`patch11.js` runs on the saved graph as it was after patch10: with that graph open, paste the script into the browser console, then run `Calc.setState(__build11(Calc.getState()).S)`. The live demo already includes it.
 
 ## Limits
 
