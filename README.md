@@ -64,6 +64,7 @@ Landmarks are modeled as buildings with a name sign on the front. The LIRR stati
 - **Cars in the wrong grid.** Parked cars first used the house grid, which was too coarse for them. Moving them to the finer road grid fixed the problem.
 - **Fitting letters in the font.** Each glyph is limited to 14 points, so I had to redraw the 3 and 8 to stay under the limit.
 - **Shadows that cost too much.** The first tree shadows projected all eight corners of every shadow into 3D and slowed the graph by about 6%. Projecting only each shadow's center and scaling a fixed octagon looks the same and costs almost nothing.
+- **Freezing after a few minutes.** After a few minutes of driving, the graph would stall for seconds at a time. Desmos turns list math into JavaScript functions and writes long decimals (like the sine of the car's heading) straight into their code, so every tick produced hundreds of new functions and the browser's memory ballooned. Rounding the car's position and heading to six decimals in the ticker, computing the heading's sine and cosine there, and finding the nearest road with a sort instead of comparing against a moving minimum lets Desmos reuse the same compiled code every tick, and memory stays flat.
 
 ## Repository layout
 
@@ -77,6 +78,8 @@ src/
                   parking cam, street signs and facade signs
   patch11.js      in-browser builder: sky gradient, horizon layers, distance haze on the
                   ground and roads, tree shadows, sunlit tree crowns, expression folding
+  patch12.js      in-browser fix for freezes after a few minutes of driving: rounded car state
+                  and per-tick trig so Desmos stops regenerating code
 data/
   final_lines.json   street network (names, road class, points in meters)
   final_rail.json    LIRR line
@@ -93,7 +96,7 @@ node src/pack3.js
 
 The patch scripts run in the browser console on a Desmos page and add their expressions to a base graph state (the camera, dashboard and driving engine). That base state lives in the saved graph rather than in this repository, so the live demo is the complete working version and the code here documents how the world and the later features were built.
 
-`patch11.js` runs on the saved graph as it was after patch10: with that graph open, paste the script into the browser console, then run `Calc.setState(__build11(Calc.getState()).S)`. The live demo already includes it.
+`patch11.js` and `patch12.js` run on the saved graph as it was after patch10: with that graph open, paste each script into the browser console and run `Calc.setState(__build11(Calc.getState()).S)`, then `Calc.setState(__build12(Calc.getState()).S)`. The live demo already includes both.
 
 ## Limits
 
